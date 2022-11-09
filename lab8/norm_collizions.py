@@ -47,31 +47,30 @@ class ball:
         self.__coord = np.array([float(randint(self.__MAX_R, SCRN_SZ_X - self.__MAX_R)), 
                                 float(randint(self.__MAX_R, SCRN_SZ_Y - self.__MAX_R))])
         self.__spd = np.array([random() * self.__SPD, random() * self.__SPD])
-        self.__force = np.array([0, 0])
         self.__mass = self.__r**2
+        self.__force = np.array([0, 0])
 
     '''getters'''
     def get_coord(self):
         return self.__coord
-    def get_force(self):
-        return self.__force
     def get_rad(self):
         return self.__r
     def get_color(self):
         return self.__color
     def get_spd(self):
         return self.__spd
+    def get_mass(self):
+        return self.__mass
 
     '''setters'''
     def set_coord(self, coord):
         self.__coord = coord
-    def set_force(self, force):
-        self.__force = force
     def set_spd(self, spd):
         self.__spd = spd
 
     def move(self):
-        self.__spd += self.__force / self.__mass * TIME_PERIOD
+        self.__spd += self.__force / self.__mass
+        bounce(balls)
         self.__coord += self.__spd * TIME_PERIOD
 
 def radius_vector(ball1, ball2):
@@ -79,16 +78,13 @@ def radius_vector(ball1, ball2):
         ball1 -----> ball2'''
     return ball2.get_coord() - ball1.get_coord()
 
-def getCollision(ball1, ball2):
-    '''1----r1----->       2
-             <---x--
-       1     <-----r2------2
-       returns x or 0 if x < 0'''
+def collizionCheck(ball1, ball2):
+    '''checks if there is collizion between ball1 and ball2'''
     rad_vec = radius_vector(ball1, ball2)
     dist = vec_len(rad_vec)
     if (dist > ball1.get_rad() + ball2.get_rad()):
-        return np.array([0, 0])
-    return -rad_vec * (ball1.get_rad() + ball2.get_rad() - dist) / dist
+        return False
+    return True
 
 def fill_balls(balls):
     '''creates balls, if there is no enough balls inside
@@ -97,7 +93,7 @@ def fill_balls(balls):
         new_ball = ball()
         flag = True
         for i in balls:
-            if vec_len(getCollision(i, new_ball)) != 0:
+            if collizionCheck(new_ball, i):
                 flag = False
         if flag:
             balls.append(new_ball)
@@ -131,14 +127,26 @@ def bounce(balls):
             new_spd[1] = -abs(spd[1])
         currBall.set_spd(new_spd)
 
+def center_mass_speed(ball1, ball2):
+    return (ball1.get_spd() * ball1.get_mass() + ball2.get_spd() * ball2.get_mass()) / (ball1.get_mass() + ball2.get_mass())
+
 def collizion(balls):
     '''reverses velocities for collided balls'''
     for i in range(len(balls)):
-        force = np.array(ZERO)
-        for j in range(len(balls)):
-            if (i != j):
-                force += getCollision(balls[i], balls[j]) * FORCE_MEASURE * vec_len(getCollision(balls[i], balls[j]))**POWER
-        balls[i].set_force(force)
+        for j in range(i + 1, len(balls)):
+            if (collizionCheck(balls[i], balls[j])):
+                vcm = center_mass_speed(balls[i], balls[j])
+                if (np.dot(balls[i].get_spd() - vcm, radius_vector(balls[i], balls[j])) > 0):
+                    v1cm = balls[i].get_spd() - vcm
+                    v2cm = balls[j].get_spd() - vcm
+                    erv1 = radius_vector(balls[i], balls[j])/vec_len(radius_vector(balls[i], balls[j]))
+                    erv2 = -erv1
+                    v1cmt = np.dot(v1cm, erv1) * erv1
+                    v1cmn = v1cm - v1cmt
+                    v2cmt = np.dot(v2cm, erv2) * erv2
+                    v2cmn = v2cm - v2cmt
+                    balls[i].set_spd(v1cmn - v1cmt + vcm)
+                    balls[j].set_spd(v2cmn - v2cmt + vcm)
 
 balls = []
 
@@ -147,7 +155,6 @@ while not finished:
     fill_balls(balls)
     display_balls(balls)
     collizion(balls)
-    bounce(balls)
     move_balls(balls)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
