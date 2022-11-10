@@ -5,14 +5,14 @@ import numpy as np
 pygame.init()
 
 '''constants'''
-POWER = 2
+POWER = 4
 ZERO = [.0, .0]
 FPS = 30
 SCRN_SZ_X = 1200
 SCRN_SZ_Y = 700
 TIME_PERIOD = 1 / FPS
 CNT_BALLS = 10
-FORCE_MEASURE = 1000
+FORCE_MEASURE = 100
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
